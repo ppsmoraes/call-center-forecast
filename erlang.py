@@ -1,6 +1,6 @@
 """Module that calculates important metrics for a call center planinng."""
 
-from math import exp, factorial
+from math import ceil, exp, factorial
 from typing import overload
 
 
@@ -205,25 +205,44 @@ def service_level(**kwargs) -> float:
     agents: int = kwargs.pop('agents')
     tt: int = kwargs.pop('target_time')
     try:
-        ec: float = kwargs.pop('erlang_c')
-    except KeyError:
-        ec: float = erlang_c(agents=agents, **kwargs)
-    try:
         ti: float = kwargs.pop('traffic_intensity')
     except KeyError:
-        ti: float = traffic_intensity(**kwargs)
+        ti: float = traffic_intensity(average_handling_time=aht, **kwargs)
+    try:
+        ec: float = kwargs.pop('erlang_c')
+    except KeyError:
+        ec: float = erlang_c(agents=agents, traffic_intensity=ti)
 
     return 1 - (ec * exp((ti - agents) * (tt / aht)))
 
 
-# TODO Build this function
-def estimate_agent_required(): ...
+def agents_required(
+    traffic_intensity: float,
+    average_handling_time: float,
+    target_time: float,
+    target_service_level: float,
+) -> int:
+    # TODO Create docstring
+    ti: float = traffic_intensity
+    aht: float = average_handling_time
+    tt: float = target_time
+    agents: int = ceil(ti)
+    while (
+        service_level(
+            traffic_intensity=ti,
+            average_handling_time=aht,
+            agents=agents,
+            target_time=tt,
+        )
+        < target_service_level
+    ):
+        agents += 1
+    return agents
 
 
 # TODO Create tests for this module and delete the main function
 def main() -> None:
     """
-    Required Service Level – 80%
     Maximum Occupancy – 85%
     Shrinkage – 30%
 
@@ -233,21 +252,24 @@ def main() -> None:
     period = 30  # Period of time in minutes
     aht = 180  # Average Handling Time in seconds
     target_time = 20  # The target answer time for the service level
-    agents = 11  # The number of agents that can answer those calls
+    target_service_level = 0.8  # The constracted service level
 
     cph = calls_per_hour(calls, period)
     print(f'Calls per hour: {cph}')
 
-    traffic = traffic_intensity(calls_per_hour=cph, average_handling_time=aht)
-    print(f'Traffic intensity: {traffic}')
+    ti = traffic_intensity(calls_per_hour=cph, average_handling_time=aht)
+    print(f'Traffic intensity: {ti}')
 
-    ec = erlang_c(traffic_intensity=traffic, agents=agents)
+    agents: int = agents_required(ti, aht, target_time, target_service_level)
+    print(f'Agents: {agents}')
+
+    ec = erlang_c(traffic_intensity=ti, agents=agents)
     print(f'Erlang-c: {ec:.3%}')
 
     sl = service_level(
         erlang_c=ec,
         agents=agents,
-        traffic_intensity=traffic,
+        traffic_intensity=ti,
         target_time=target_time,
         average_handling_time=aht,
     )
