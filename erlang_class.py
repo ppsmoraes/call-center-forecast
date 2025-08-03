@@ -57,46 +57,8 @@ class CallCenterPredictions:
                 f'The target service level should be a number between 0 and 1 (both ends included). But {self.tsl} were given.'
             )
 
-        self.period: float = self.period_in_seconds()
-        self.cph: float = self.calls_per_hour()
         self.erlangs: float = self.traffic_intensity()
         self.raw_agents: int = self.raw_agents_required()
-
-    def period_in_seconds(self) -> float:
-        """Calculate the period of time in seconds.
-
-        Returns
-        -------
-        float
-            Period of time in seconds.
-
-        Exemples
-        --------
-        >>> from erlang_class import CallCenterPredictions
-        >>> from datetime import datetime
-        >>> predictions = CallCenterPredictions(
-        ...     start_time=datetime(2021, 4, 1, 8),
-        ...     end_time=datetime(2021, 4, 1, 8, 30),
-        ...     calls=100,
-        ...     average_handling_time=180,
-        ...     target_service_level=0.8,
-        ...     target_answer_time=20
-        ... )
-        >>> predictions.period_in_seconds()
-        1800.0
-        """
-        return (self.end_time - self.start_time).total_seconds()
-
-    def calls_per_hour(self) -> float:
-        # TODO Add exemples
-        """Calculate the number of calls per hour.
-
-        Returns
-        -------
-        float
-            Calls per hour.
-        """
-        return self.calls * (3600 / self.period)
 
     def traffic_intensity(self) -> float:
         # TODO Add exemples
@@ -107,7 +69,8 @@ class CallCenterPredictions:
         float
             Traffic intensity in Erlangs.
         """
-        return self.cph * (self.aht / 3600)
+        _period = (self.end_time - self.start_time).total_seconds()
+        return self.calls * (self.aht / _period)
 
     def erlang_c(self, agents: int) -> float:
         # TODO Add exemples
@@ -154,6 +117,30 @@ class CallCenterPredictions:
             agents += 1
         return agents
 
+    def average_speed_of_answer(self) -> float:
+        # TODO Create docstring
+        return (self.erlang_c(self.raw_agents) * self.aht) / (
+            self.raw_agents - self.erlangs
+        )
+
+    def percentage_calls_answered_immediately(self) -> float:
+        # TODO Create docstring
+        return 1 - self.erlang_c(self.raw_agents)
+
+    def ocuppancy(self) -> float:
+        # TODO Create docstring
+        return self.erlangs / self.raw_agents
+
+    def agentes_required(self, shinkrage: float) -> int:
+        # TODO Create docstring
+        return ceil(self.raw_agents / (1 - shinkrage))
+
+    def erlang_a(self, average_patiance: int) -> float:
+        # TODO Create docstring
+        return self.erlang_c(self.raw_agents) * exp(
+            (self.erlangs - self.raw_agents) * (average_patiance / self.aht)
+        )
+
     def to_pandas(self) -> DataFrame:
         # TODO Add docstring
         return DataFrame([self.__dict__])
@@ -168,13 +155,21 @@ class CallCenterPredictions:
 def main() -> None:
     predictions = CallCenterPredictions(
         start_time=datetime(2021, 4, 1, 8),
-        end_time=datetime(2021, 4, 1, 8, 30),
+        end_time=datetime(2021, 4, 1, 9),
         calls=100,
-        average_handling_time=180,
+        average_handling_time=340,
         target_service_level=0.8,
-        target_answer_time=20,
+        target_answer_time=30,
     )
     print(predictions)
+    print(f'Service Level: {predictions.service_level(predictions.raw_agents):.2%}')
+    print(f'ASA: {predictions.average_speed_of_answer():.2f}s')
+    print(
+        f'Answered immediately: {predictions.percentage_calls_answered_immediately():.2%}'
+    )
+    print(f'Ocuppancy: {predictions.ocuppancy():.2%}')
+    print(f'Agents required: {predictions.agentes_required(0.3)}')
+    print(f'Abandonadas: {predictions.erlang_a(20):.2%}')
 
 
 if __name__ == '__main__':
