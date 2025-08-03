@@ -61,13 +61,28 @@ class CallCenterPredictions:
         self.raw_agents: int = self.raw_agents_required()
 
     def traffic_intensity(self) -> float:
-        # TODO Add exemples
+        # TODO Add tests
         """Calculate traffic intensity (in Erlangs).
 
         Returns
         -------
         float
             Traffic intensity in Erlangs.
+
+        Examples
+        --------
+        >>> from erlang_class import CallCenterPredictions
+        >>> from datetime import datetime
+        >>> pred = CallCenterPredictions(
+        ...     start_time=datetime(2021, 4, 1, 8),
+        ...     end_time=datetime(2021, 4, 1, 9),
+        ...     calls=390,
+        ...     average_handling_time=300,
+        ...     target_service_level=0.8,
+        ...     target_answer_time=30,
+        ... )
+        >>> pred.traffic_intensity()
+        32.5
         """
         _period = (self.end_time - self.start_time).total_seconds()
         return self.calls * (self.aht / _period)
@@ -156,8 +171,8 @@ def main() -> None:
     predictions = CallCenterPredictions(
         start_time=datetime(2021, 4, 1, 8),
         end_time=datetime(2021, 4, 1, 9),
-        calls=100,
-        average_handling_time=340,
+        calls=390,
+        average_handling_time=300,
         target_service_level=0.8,
         target_answer_time=30,
     )
