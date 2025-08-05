@@ -1,4 +1,4 @@
-"""Module that calculates important metrics for a call center planinng."""
+"""Module that calculates important metrics for call center planning."""
 
 from datetime import datetime
 from math import ceil, exp, factorial
@@ -7,7 +7,7 @@ from pandas import DataFrame
 
 
 class CallCenterPredictions:
-    """Classe that contains the predictable variables of a call center in a certain period of time."""
+    """Class that contains the predictable variables of a call center in a certain period of time."""
 
     def __init__(
         self,
@@ -18,16 +18,16 @@ class CallCenterPredictions:
         target_service_level: float,
         target_answer_time: int,
     ) -> None:
-        """Predictable variables of a call center in a certain period of time.
+        """Initialize predictable variables of a call center in a certain period of time.
 
         Parameters
         ----------
         start_time : datetime
-            The stating date and time.
+            The starting date and time.
         end_time : datetime
             The ending date and time.
         calls : int
-            The number of expected calls in thar period of time.
+            The number of expected calls in that period of time.
         average_handling_time : int
             The average handling time in seconds.
         target_service_level : float
@@ -54,7 +54,7 @@ class CallCenterPredictions:
 
         if self.tsl > 1 or self.tsl < 0:
             raise ValueError(
-                f'The target service level should be a number between 0 and 1 (both ends included). But {self.tsl} were given.'
+                f'The target service level should be a number between 0 and 1 (both ends included). But {self.tsl} was given.'
             )
 
         self.erlangs: float = self.traffic_intensity()
@@ -71,7 +71,6 @@ class CallCenterPredictions:
 
         Examples
         --------
-        >>> from erlang_class import CallCenterPredictions
         >>> from datetime import datetime
         >>> pred = CallCenterPredictions(
         ...     start_time=datetime(2021, 4, 1, 8),
@@ -88,7 +87,7 @@ class CallCenterPredictions:
         return self.calls * (self.aht / _period)
 
     def erlang_c(self, agents: int) -> float:
-        # TODO Add exemples
+        # TODO Add tests
         """Calculate the probability that a call will wait in queue (Erlang C formula).
 
         Parameters
@@ -100,6 +99,20 @@ class CallCenterPredictions:
         -------
         float
             Probability that a call will wait in queue (Erlang C).
+
+        Examples
+        --------
+        >>> from datetime import datetime
+        >>> pred = CallCenterPredictions(
+        ...     start_time=datetime(2021, 4, 1, 8),
+        ...     end_time=datetime(2021, 4, 1, 9),
+        ...     calls=390,
+        ...     average_handling_time=300,
+        ...     target_service_level=0.8,
+        ...     target_answer_time=30,
+        ... )
+        >>> pred.erlang_c(35)
+        0.5700850250324968
         """
         _num: float = self.erlangs**agents / factorial(agents)
         _den: float = sum(self.erlangs**_ / factorial(_) for _ in range(agents)) * (
@@ -108,7 +121,7 @@ class CallCenterPredictions:
         return _num / (_den + _num)
 
     def service_level(self, agents: int) -> float:
-        # TODO Add exemples
+        # TODO Add tests
         """Calculate the estimated service level.
 
         Parameters
@@ -120,19 +133,48 @@ class CallCenterPredictions:
         -------
         float
             Estimated service level (probability that a call is answered within the target time).
+
+        Examples
+        --------
+        >>> from datetime import datetime
+        >>> pred = CallCenterPredictions(
+        ...     start_time=datetime(2021, 4, 1, 8),
+        ...     end_time=datetime(2021, 4, 1, 9),
+        ...     calls=390,
+        ...     average_handling_time=300,
+        ...     target_service_level=0.8,
+        ...     target_answer_time=30,
+        ... )
+        >>> pred.service_level(35)
+        0.5560173360874101
         """
         return 1 - (
             self.erlang_c(agents) * exp((self.erlangs - agents) * (self.tat / self.aht))
         )
 
     def raw_agents_required(self) -> int:
-        # TODO Add exemples
-        """Calculate the quantity of agents required to archieve the target service level.
+        # TODO Considere the maximum occupancy too
+        # TODO Add tests
+        """Calculate the quantity of agents required to achieve the target service level.
 
         Returns
         -------
         int
-            The agents required.
+            The minimum number of agents required to meet the target service level.
+
+        Examples
+        --------
+        >>> from datetime import datetime
+        >>> pred = CallCenterPredictions(
+        ...     start_time=datetime(2021, 4, 1, 8),
+        ...     end_time=datetime(2021, 4, 1, 9),
+        ...     calls=390,
+        ...     average_handling_time=300,
+        ...     target_service_level=0.8,
+        ...     target_answer_time=30,
+        ... )
+        >>> pred.raw_agents_required()
+        38
         """
         agents: int = ceil(self.erlangs)  # Initial guess for agents
         while self.service_level(agents) < self.tsl:
@@ -140,47 +182,127 @@ class CallCenterPredictions:
         return agents
 
     def average_speed_of_answer(self) -> float:
-        # TODO Create docstring
+        # TODO Add exemples
+        # TODO Add tests
+        """Calculate the average speed of answer (ASA) in seconds.
+
+        Returns
+        -------
+        float
+            The average time callers wait before being answered, in seconds.
+        """
         return (self.erlang_c(self.raw_agents) * self.aht) / (
             self.raw_agents - self.erlangs
         )
 
     def percentage_calls_answered_immediately(self) -> float:
-        # TODO Create docstring
+        # TODO Add exemples
+        # TODO Add tests
+        """Calculate the percentage of calls answered immediately without waiting.
+
+        Returns
+        -------
+        float
+            The probability that a call will be answered immediately (no queue).
+        """
         return 1 - self.erlang_c(self.raw_agents)
 
-    def ocuppancy(self) -> float:
-        # TODO Create docstring
+    def occupancy(self) -> float:
+        # TODO Add exemples
+        # TODO Add tests
+        """Calculate the agent occupancy rate.
+
+        Returns
+        -------
+        float
+            The fraction of time agents are busy handling calls (value between 0 and 1).
+        """
         return self.erlangs / self.raw_agents
 
-    def agentes_required(self, shinkrage: float) -> int:
-        # TODO Create docstring
-        return ceil(self.raw_agents / (1 - shinkrage))
+    def agents_required(self, shrinkage: float) -> int:
+        # TODO Add exemples
+        # TODO Add tests
+        """Calculate the actual number of agents needed accounting for shrinkage.
 
-    def erlang_a(self, average_patiance: int) -> float:
-        # TODO Create docstring
+        Parameters
+        ----------
+        shrinkage : float
+            The fraction of time agents are unavailable (value between 0 and 1).
+
+        Returns
+        -------
+        int
+            The total number of agents needed including shrinkage factor.
+        """
+        return ceil(self.raw_agents / (1 - shrinkage))
+
+    def erlang_a(self, average_patience: int) -> float:
+        # TODO Add exemples
+        # TODO Add tests
+        """Calculate the probability of abandonment using Erlang A formula.
+
+        Parameters
+        ----------
+        average_patience : int
+            The average time in seconds that callers will wait before hanging up.
+
+        Returns
+        -------
+        float
+            The probability that a call will be abandoned before being answered.
+        """
         return self.erlang_c(self.raw_agents) * exp(
-            (self.erlangs - self.raw_agents) * (average_patiance / self.aht)
+            (self.erlangs - self.raw_agents) * (average_patience / self.aht)
         )
 
     def to_pandas(self) -> DataFrame:
-        # TODO Add exemples
+        # TODO Add tests
         """Return the data in a pandas.DataFrame.
 
         Returns
         -------
         DataFrame
-            The data, both given and calculated.
+            The data, both given and calculated, in DataFrame format.
+
+        Examples
+        --------
+        >>> from datetime import datetime
+        >>> pred = CallCenterPredictions(
+        ...     start_time=datetime(2021, 4, 1, 8),
+        ...     end_time=datetime(2021, 4, 1, 9),
+        ...     calls=390,
+        ...     average_handling_time=300,
+        ...     target_service_level=0.8,
+        ...     target_answer_time=30,
+        ... )
+        >>> pred.to_pandas()
+                   start_time            end_time  calls  aht  tsl  tat  erlangs  raw_agents
+        0 2021-04-01 08:00:00 2021-04-01 09:00:00    390  300  0.8   30     32.5          38
         """
         return DataFrame([self.__dict__])
 
     def __str__(self) -> str:
-        # TODO Add exemples
+        # TODO Add tests
         """Return the data in a string format.
 
         Returns
         -------
         str
-            The data in the string format, but in pandas.DataFrame style.
+            The data in string format, similar to pandas.DataFrame style.
+
+        Examples
+        --------
+        >>> from datetime import datetime
+        >>> pred = CallCenterPredictions(
+        ...     start_time=datetime(2021, 4, 1, 8),
+        ...     end_time=datetime(2021, 4, 1, 9),
+        ...     calls=390,
+        ...     average_handling_time=300,
+        ...     target_service_level=0.8,
+        ...     target_answer_time=30,
+        ... )
+        >>> print(pred)
+                   start_time            end_time  calls  aht  tsl  tat  erlangs  raw_agents
+        0 2021-04-01 08:00:00 2021-04-01 09:00:00    390  300  0.8   30     32.5          38
         """
         return str(self.to_pandas())
