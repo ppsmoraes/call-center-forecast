@@ -1,279 +1,190 @@
 """Module that calculates important metrics for a call center planinng."""
 
+from datetime import datetime
 from math import ceil, exp, factorial
-from typing import overload
+
+from pandas import DataFrame
 
 
-def calls_per_hour(calls: int, period: float) -> float:
-    # TODO Add exemples
-    """Calculate the number of calls per hour.
+class CallCenterPredictions:
+    """Classe that contains the predictable variables of a call center in a certain period of time."""
 
-    Parameters
-    ----------
-    calls : float
-        The number of calls.
-    period : int
-        The period of time in minutes.
+    def __init__(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        calls: int,
+        average_handling_time: int,
+        target_service_level: float,
+        target_answer_time: int,
+    ) -> object:
+        """Predictable variables of a call center in a certain period of time.
 
-    Returns
-    -------
-    float
-        The calls per hour.
-    """
-    return calls * (60 / period)
+        Parameters
+        ----------
+        start_time : datetime
+            The stating date and time.
+        end_time : datetime
+            The ending date and time.
+        calls : int
+            The number of expected calls in thar period of time.
+        average_handling_time : int
+            The average handling time in seconds.
+        target_service_level : float
+            The service level required in that period of time. This should be a number between 0 and 1 (both ends included).
+        target_answer_time : int
+            The target service level time to answer a call in seconds.
 
+        Returns
+        -------
+        CallCenterPredictions
+            The predictable variables of a call center in a certain period of time.
 
-@overload
-def traffic_intensity(
-    *, calls_per_hour: float, average_handling_time: float
-) -> float: ...
-@overload
-def traffic_intensity(
-    *, calls: int, period: float, average_handling_time: float
-) -> float: ...
-def traffic_intensity(**kwargs) -> float:
-    # TODO Add exemples
-    """
-    Calculate traffic intensity (in Erlangs).
+        Raises
+        ------
+        ValueError
+            If ``target_service_level`` given is not a number between 0 and 1 (both ends included).
+        """
+        self.start_time: datetime = start_time
+        self.end_time: datetime = end_time
+        self.calls: int = calls
+        self.aht: int = average_handling_time
+        self.tsl: float = target_service_level
+        self.tat: int = target_answer_time
 
-    Usage modes:
-    ------------
-    - traffic_intensity(calls_per_hour=..., average_handling_time=...)
-    - traffic_intensity(calls=..., period=..., average_handling_time=...)
+        if self.tsl > 1 or self.tsl < 0:
+            raise ValueError(
+                f'The target service level should be a number between 0 and 1 (both ends included). But {self.tsl} were given.'
+            )
 
-    Parameters
-    ----------
-    calls : int, optional
-        Total number of calls in a period.
-    period : float, optional
-        Period of time in minutes.
-    calls_per_hour : float, optional
-        Number of calls per hour.
-    average_handling_time : float
-        Average handling time (in seconds).
+        self.erlangs: float = self.traffic_intensity()
+        self.raw_agents: int = self.raw_agents_required()
 
-    Returns
-    -------
-    float
-        Traffic intensity in Erlangs.
-    """
-    aht: float = kwargs.pop('average_handling_time')
-    try:
-        cph: float = kwargs.pop('calls_per_hour')
-    except KeyError:
-        cph: float = calls_per_hour(**kwargs)
+    def traffic_intensity(self) -> float:
+        # TODO Add tests
+        """Calculate traffic intensity (in Erlangs).
 
-    return cph * (aht / 3600)
+        Returns
+        -------
+        float
+            Traffic intensity in Erlangs.
 
+        Examples
+        --------
+        >>> from erlang_class import CallCenterPredictions
+        >>> from datetime import datetime
+        >>> pred = CallCenterPredictions(
+        ...     start_time=datetime(2021, 4, 1, 8),
+        ...     end_time=datetime(2021, 4, 1, 9),
+        ...     calls=390,
+        ...     average_handling_time=300,
+        ...     target_service_level=0.8,
+        ...     target_answer_time=30,
+        ... )
+        >>> pred.traffic_intensity()
+        32.5
+        """
+        _period = (self.end_time - self.start_time).total_seconds()
+        return self.calls * (self.aht / _period)
 
-@overload
-def erlang_c(*, traffic_intensity: float, agents: int) -> float: ...
-@overload
-def erlang_c(
-    *, calls_per_hour: float, average_handling_time: float, agents: int
-) -> float: ...
-@overload
-def erlang_c(
-    *, calls: int, period: float, average_handling_time: float, agents: int
-) -> float: ...
-def erlang_c(**kwargs) -> float:
-    # TODO Add exemples
-    """
-    Calculate the probability that a call will wait in queue (Erlang C formula).
+    def erlang_c(self, agents: int) -> float:
+        # TODO Add exemples
+        """Calculate the probability that a call will wait in queue (Erlang C formula).
 
-    Usage modes:
-    ------------
-    - erlang_c(traffic_intensity=..., agents=...)
-    - erlang_c(calls_per_hour=..., average_handling_time=..., agents=...)
-    - erlang_c(calls=..., period=..., average_handling_time=..., agents=...)
+        Parameters
+        ----------
+        agents : int
+            The quantity of agents to answer those calls.
 
-    Parameters
-    ----------
-    traffic_intensity : float, optional
-        Offered traffic (in Erlangs).
-    calls_per_hour : float, optional
-        Calls per hour.
-    calls : int, optional
-        Total number of calls in a time period.
-    period : float, optional
-        Time period in minutes.
-    average_handling_time : float, optional
-        Average handling time (in seconds).
-    agents : int
-        Number of available agents.
-
-    Returns
-    -------
-    float
-        Probability that a call will wait in queue (Erlang C).
-    """
-    agents: int = kwargs.pop('agents')
-    try:
-        ti: float = kwargs.pop('traffic_intensity')
-    except KeyError:
-        ti: float = traffic_intensity(**kwargs)
-
-    num: float = ti**agents / factorial(agents)
-    den: float = (1 - ti / agents) * sum(ti**i / factorial(i) for i in range(agents))
-    return num / (den + num)
-
-
-@overload
-def service_level(
-    *,
-    erlang_c: float,
-    traffic_intensity: float,
-    average_handling_time: float,
-    agents: int,
-    target_time: float,
-) -> float: ...
-@overload
-def service_level(
-    *,
-    erlang_c: float,
-    calls_per_hour: float,
-    average_handling_time: float,
-    agents: int,
-    target_time: float,
-) -> float: ...
-@overload
-def service_level(
-    *,
-    erlang_c: float,
-    calls: float,
-    period: float,
-    average_handling_time: float,
-    agents: int,
-    target_time: float,
-) -> float: ...
-@overload
-def service_level(
-    *,
-    traffic_intensity: float,
-    average_handling_time: float,
-    agents: int,
-    target_time: float,
-) -> float: ...
-@overload
-def service_level(
-    *,
-    calls_per_hour: float,
-    average_handling_time: float,
-    agents: int,
-    target_time: float,
-) -> float: ...
-@overload
-def service_level(
-    *,
-    calls: int,
-    period: float,
-    average_handling_time: float,
-    agents: int,
-    target_time: float,
-) -> float: ...
-def service_level(**kwargs) -> float:
-    # TODO Add usage modes
-    # TODO Add exemples
-    """
-    Calculate the estimated service level.
-
-    Parameters
-    ----------
-    erlang_c : float, optional
-        Probability that a call waits in queue (Erlang C).
-    traffic_intensity : float, optional
-        Traffic intensity in Erlangs.
-    calls_per_hour : float, optional
-        Number of calls per hour.
-    calls : int, optional
-        Total number of calls in a time period.
-    period : float, optional
-        Time period in minutes.
-    average_handling_time : float
-        Average handling time in seconds.
-    agents : int
-        Number of available agents.
-    target_time : float
-        Target service level time in seconds.
-
-    Returns
-    -------
-    float
-        Estimated service level (probability that a call is answered within the target time).
-    """
-    aht: float = kwargs.pop('average_handling_time')
-    agents: int = kwargs.pop('agents')
-    tt: int = kwargs.pop('target_time')
-    try:
-        ti: float = kwargs.pop('traffic_intensity')
-    except KeyError:
-        ti: float = traffic_intensity(average_handling_time=aht, **kwargs)
-    try:
-        ec: float = kwargs.pop('erlang_c')
-    except KeyError:
-        ec: float = erlang_c(agents=agents, traffic_intensity=ti)
-
-    return 1 - (ec * exp((ti - agents) * (tt / aht)))
-
-
-def agents_required(
-    traffic_intensity: float,
-    average_handling_time: float,
-    target_time: float,
-    target_service_level: float,
-) -> int:
-    # TODO Create docstring
-    ti: float = traffic_intensity
-    aht: float = average_handling_time
-    tt: float = target_time
-    agents: int = ceil(ti)
-    while (
-        service_level(
-            traffic_intensity=ti,
-            average_handling_time=aht,
-            agents=agents,
-            target_time=tt,
+        Returns
+        -------
+        float
+            Probability that a call will wait in queue (Erlang C).
+        """
+        _num: float = self.erlangs**agents / factorial(agents)
+        _den: float = sum(self.erlangs**_ / factorial(_) for _ in range(agents)) * (
+            1 - self.erlangs / agents
         )
-        < target_service_level
-    ):
-        agents += 1
-    return agents
+        return _num / (_den + _num)
+
+    def service_level(self, agents: int) -> float:
+        # TODO Add exemples
+        """Calculate the estimated service level.
+
+        Parameters
+        ----------
+        agents : int
+            The quantity of agents to answer those calls.
+
+        Returns
+        -------
+        float
+            Estimated service level (probability that a call is answered within the target time).
+        """
+        return 1 - (
+            self.erlang_c(agents) * exp((self.erlangs - agents) * (self.tat / self.aht))
+        )
+
+    def raw_agents_required(self) -> int:
+        # TODO Create docstring
+        agents: int = ceil(self.erlangs)  # Initial guess for agents
+        while self.service_level(agents) < self.tsl:
+            agents += 1
+        return agents
+
+    def average_speed_of_answer(self) -> float:
+        # TODO Create docstring
+        return (self.erlang_c(self.raw_agents) * self.aht) / (
+            self.raw_agents - self.erlangs
+        )
+
+    def percentage_calls_answered_immediately(self) -> float:
+        # TODO Create docstring
+        return 1 - self.erlang_c(self.raw_agents)
+
+    def ocuppancy(self) -> float:
+        # TODO Create docstring
+        return self.erlangs / self.raw_agents
+
+    def agentes_required(self, shinkrage: float) -> int:
+        # TODO Create docstring
+        return ceil(self.raw_agents / (1 - shinkrage))
+
+    def erlang_a(self, average_patiance: int) -> float:
+        # TODO Create docstring
+        return self.erlang_c(self.raw_agents) * exp(
+            (self.erlangs - self.raw_agents) * (average_patiance / self.aht)
+        )
+
+    def to_pandas(self) -> DataFrame:
+        # TODO Add docstring
+        return DataFrame([self.__dict__])
+
+    def __str__(self) -> str:
+        # TODO Add docstring
+        return str(self.to_pandas())
 
 
-# TODO Create tests for this module and delete the main function
+# TODO Remove this and add tests.
+# For developer phase only
 def main() -> None:
-    """
-    Maximum Occupancy – 85%
-    Shrinkage – 30%
-
-    https://www.callcentrehelper.com/erlang-c-formula-example-121281.htm
-    """
-    calls = 100  # Number of calls
-    period = 30  # Period of time in minutes
-    aht = 180  # Average Handling Time in seconds
-    target_time = 20  # The target answer time for the service level
-    target_service_level = 0.8  # The constracted service level
-
-    cph = calls_per_hour(calls, period)
-    print(f'Calls per hour: {cph}')
-
-    ti = traffic_intensity(calls_per_hour=cph, average_handling_time=aht)
-    print(f'Traffic intensity: {ti}')
-
-    agents: int = agents_required(ti, aht, target_time, target_service_level)
-    print(f'Agents: {agents}')
-
-    ec = erlang_c(traffic_intensity=ti, agents=agents)
-    print(f'Erlang-c: {ec:.3%}')
-
-    sl = service_level(
-        erlang_c=ec,
-        agents=agents,
-        traffic_intensity=ti,
-        target_time=target_time,
-        average_handling_time=aht,
+    predictions = CallCenterPredictions(
+        start_time=datetime(2021, 4, 1, 8),
+        end_time=datetime(2021, 4, 1, 9),
+        calls=390,
+        average_handling_time=300,
+        target_service_level=0.8,
+        target_answer_time=30,
     )
-    print(f'Service Level: {sl:.3%}')
+    print(predictions)
+    print(f'Service Level: {predictions.service_level(predictions.raw_agents):.2%}')
+    print(f'ASA: {predictions.average_speed_of_answer():.2f}s')
+    print(
+        f'Answered immediately: {predictions.percentage_calls_answered_immediately():.2%}'
+    )
+    print(f'Ocuppancy: {predictions.ocuppancy():.2%}')
+    print(f'Agents required: {predictions.agentes_required(0.3)}')
+    print(f'Abandonadas: {predictions.erlang_a(20):.2%}')
 
 
 if __name__ == '__main__':
