@@ -17,7 +17,7 @@ class CallCenterPredictions:
         average_handling_time: int,
         target_service_level: float,
         target_answer_time: int,
-    ) -> object:
+    ) -> None:
         """Predictable variables of a call center in a certain period of time.
 
         Parameters
@@ -126,7 +126,14 @@ class CallCenterPredictions:
         )
 
     def raw_agents_required(self) -> int:
-        # TODO Create docstring
+        # TODO Add exemples
+        """Calculate the quantity of agents required to archieve the target service level.
+
+        Returns
+        -------
+        int
+            The agents required.
+        """
         agents: int = ceil(self.erlangs)  # Initial guess for agents
         while self.service_level(agents) < self.tsl:
             agents += 1
@@ -157,35 +164,23 @@ class CallCenterPredictions:
         )
 
     def to_pandas(self) -> DataFrame:
-        # TODO Add docstring
+        # TODO Add exemples
+        """Return the data in a pandas.DataFrame.
+
+        Returns
+        -------
+        DataFrame
+            The data, both given and calculated.
+        """
         return DataFrame([self.__dict__])
 
     def __str__(self) -> str:
-        # TODO Add docstring
+        # TODO Add exemples
+        """Return the data in a string format.
+
+        Returns
+        -------
+        str
+            The data in the string format, but in pandas.DataFrame style.
+        """
         return str(self.to_pandas())
-
-
-# TODO Remove this and add tests.
-# For developer phase only
-def main() -> None:
-    predictions = CallCenterPredictions(
-        start_time=datetime(2021, 4, 1, 8),
-        end_time=datetime(2021, 4, 1, 9),
-        calls=390,
-        average_handling_time=300,
-        target_service_level=0.8,
-        target_answer_time=30,
-    )
-    print(predictions)
-    print(f'Service Level: {predictions.service_level(predictions.raw_agents):.2%}')
-    print(f'ASA: {predictions.average_speed_of_answer():.2f}s')
-    print(
-        f'Answered immediately: {predictions.percentage_calls_answered_immediately():.2%}'
-    )
-    print(f'Ocuppancy: {predictions.ocuppancy():.2%}')
-    print(f'Agents required: {predictions.agentes_required(0.3)}')
-    print(f'Abandonadas: {predictions.erlang_a(20):.2%}')
-
-
-if __name__ == '__main__':
-    main()
