@@ -59,6 +59,7 @@ class CallCenterPredictions:
 
         self.erlangs: float = self.traffic_intensity()
         self.raw_agents: int = self.raw_agents_required()
+        self.p_wait: float = self.erlang_c(self.raw_agents)
 
     def traffic_intensity(self) -> float:
         # TODO Add tests
@@ -191,9 +192,7 @@ class CallCenterPredictions:
         float
             The average time callers wait before being answered, in seconds.
         """
-        return (self.erlang_c(self.raw_agents) * self.aht) / (
-            self.raw_agents - self.erlangs
-        )
+        return (self.p_wait * self.aht) / (self.raw_agents - self.erlangs)
 
     def percentage_calls_answered_immediately(self) -> float:
         # TODO Add exemples
@@ -205,7 +204,7 @@ class CallCenterPredictions:
         float
             The probability that a call will be answered immediately (no queue).
         """
-        return 1 - self.erlang_c(self.raw_agents)
+        return 1 - self.p_wait
 
     def occupancy(self) -> float:
         # TODO Add exemples
@@ -251,7 +250,7 @@ class CallCenterPredictions:
         float
             The probability that a call will be abandoned before being answered.
         """
-        return self.erlang_c(self.raw_agents) * exp(
+        return self.p_wait * exp(
             (self.erlangs - self.raw_agents) * (average_patience / self.aht)
         )
 
@@ -276,8 +275,8 @@ class CallCenterPredictions:
         ...     target_answer_time=30,
         ... )
         >>> pred.to_pandas()
-                   start_time            end_time  calls  aht  tsl  tat  erlangs  raw_agents
-        0 2021-04-01 08:00:00 2021-04-01 09:00:00    390  300  0.8   30     32.5          38
+                   start_time            end_time  calls  aht  tsl  tat  erlangs  raw_agents    p_wait
+        0 2021-04-01 08:00:00 2021-04-01 09:00:00    390  300  0.8   30     32.5          38  0.261203
         """
         return DataFrame([self.__dict__])
 
@@ -302,7 +301,7 @@ class CallCenterPredictions:
         ...     target_answer_time=30,
         ... )
         >>> print(pred)
-                   start_time            end_time  calls  aht  tsl  tat  erlangs  raw_agents
-        0 2021-04-01 08:00:00 2021-04-01 09:00:00    390  300  0.8   30     32.5          38
+                   start_time            end_time  calls  aht  tsl  tat  erlangs  raw_agents    p_wait
+        0 2021-04-01 08:00:00 2021-04-01 09:00:00    390  300  0.8   30     32.5          38  0.261203
         """
         return str(self.to_pandas())
