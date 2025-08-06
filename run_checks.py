@@ -15,7 +15,7 @@ def run_checks(target: str) -> None:
         The target file or directory.
     """
     commands = [
-        ['isort', '--only-modified', '--profile black', target],
+        ['isort', '--only-modified', '--profile', 'black', target],
         ['black', '--skip-string-normalization', target],
         ['pydocstyle', target],
         ['python', '-m', 'doctest', target],
