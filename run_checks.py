@@ -5,8 +5,9 @@ from sys import argv, exit
 
 
 def run_checks(target: str) -> None:
-    """
-    Execute isort, black, pydocstyle, mypy and pytest, in this order, on the specified target.
+    """Execute all code checks internally in sequence.
+
+    Order: isort → black → pydocstyle → doctest → mypy → pytest
 
     Parameters
     ----------
@@ -14,9 +15,10 @@ def run_checks(target: str) -> None:
         The target file or directory.
     """
     commands = [
-        ['isort', '--only-modified', target],
+        ['isort', '--only-modified', '--profile black', target],
         ['black', '--skip-string-normalization', target],
         ['pydocstyle', target],
+        ['python', '-m', 'doctest', target],
         ['mypy', '--namespace-packages', '--explicit-package-bases', target],
         ['pytest', '--verbose'],
     ]
