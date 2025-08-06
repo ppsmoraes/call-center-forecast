@@ -19,19 +19,16 @@ def test_traffic_intensity() -> None:
 
     assert expected == result
 
+    pred_2: CallCenterPredictions = CallCenterPredictions(
+        start_time=datetime(2020, 7, 6, 13),
+        end_time=datetime(2020, 7, 6, 14),
+        calls=230,
+        average_handling_time=180,
+        target_service_level=0.8,
+        target_answer_time=20,
+    )
 
-# def test_erlang_c_traffic_less_than_servers():
-#     assert erlang_c(2, 5) == 0.0
+    result_2: float = pred_2.traffic_intensity()
+    expected_2: float = 11.5
 
-# def test_erlang_c_waiting_probability():
-#     assert math.isclose(erlang_c_waiting_probability(10, 10), 0.4286, rel_tol=1e-3)
-
-# def test_erlang_c_average_wait_time():
-#     # Test with known values
-#     assert math.isclose(erlang_c_average_wait_time(10, 10, 1), 0.4286, rel_tol=1e-3)
-
-# def test_erlang_c_invalid_input():
-#     with pytest.raises(ValueError):
-#         erlang_c(-1, 5)
-#     with pytest.raises(ValueError):
-#         erlang_c(5, -1)
+    assert expected_2 == result_2

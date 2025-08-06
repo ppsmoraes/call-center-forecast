@@ -62,7 +62,6 @@ class CallCenterPredictions:
         self.p_wait: float = self.erlang_c(self.raw_agents)
 
     def traffic_intensity(self) -> float:
-        # TODO Add tests
         """Calculate traffic intensity (in Erlangs).
 
         Returns
