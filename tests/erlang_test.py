@@ -4,7 +4,6 @@ from erlang import CallCenterPredictions
 
 
 def test_traffic_intensity() -> None:
-    # Test with known values
     pred: CallCenterPredictions = CallCenterPredictions(
         start_time=datetime(2021, 4, 1, 8),
         end_time=datetime(2021, 4, 1, 8, 30),

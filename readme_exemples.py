@@ -1,12 +1,3 @@
-# Call Center Forecast
-
-[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-
-This is a personal repository for planning metrics in a call center.
-
-Here is a simple example:
-
-```python
 from datetime import datetime
 
 from erlang import CallCenterPredictions
@@ -26,15 +17,3 @@ print(f'Agents required (before shinkrage): {agents}')
 print(f'Service Level: {100*pred.service_level(agents):.1f}%')
 print(f'Average Speed of Snswer: {pred.average_speed_of_answer():.0f}s')
 print(f'Occupancy: {100*pred.occupancy():.1f}%')
-
-```
-
-Expected output:
-```output
-List with estimated metrics using the agents required (before shinkrage).
-Agents required (before shinkrage): 21
-Service Level: 82.6%
-Average Speed of Snswer: 16s
-Occupancy: 79.4%
-```
-The dataset was downloaded at https://www.kaggle.com/datasets/akash1vishwakarma/call-center-dataset in 2025-07-18.
